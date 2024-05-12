@@ -10,17 +10,30 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 class ChatMsg extends StatefulWidget {
-  const ChatMsg({super.key});
+  final int senderId;
+  const ChatMsg({super.key, required this.senderId});
 
   @override
   State<ChatMsg> createState() => _ChatMsgState();
 }
 
-String ip = '10.32.16.247';
-
 class _ChatMsgState extends State<ChatMsg> {
   TextEditingController textEditingController = TextEditingController();
   bool isLoading = false;
+
+  Future<void> fetchMessage() async {
+    await Future.delayed(Duration(seconds: 2), () async {
+      setState(() {});
+      await fetchMessage();
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    fetchMessage();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -103,7 +116,7 @@ class _ChatMsgState extends State<ChatMsg> {
               child: SingleChildScrollView(
                 reverse: true,
                 child: FutureBuilder(
-                    future: http.get(Uri.parse("http://$ip:3000/messages")),
+                    future: http.get(Uri.parse("$apiURL/messages")),
                     builder: (context, snapshot) {
                       if (snapshot.hasError) {
                         return Center(
@@ -115,12 +128,16 @@ class _ChatMsgState extends State<ChatMsg> {
                       } else if (snapshot.hasData) {
                         var decodedResponse = jsonDecode(snapshot.data!.body);
                         if (decodedResponse['status'] == 'success') {
-                          List messages = decodedResponse['data']['messages'];
+                          List messages = decodedResponse['data'];
                           return Column(
-                            children: messages.reversed
+                            children: messages
                                 .map(
                                   (e) => MsgContainer(
-                                    msg: e.toString(),
+                                    myId: widget.senderId,
+                                    msg: e,
+                                    onMessageDeletedOrEdited: () {
+                                      setState(() {});
+                                    },
                                   ),
                                 )
                                 .toList(),
@@ -166,10 +183,12 @@ class _ChatMsgState extends State<ChatMsg> {
                             isLoading = true;
                           });
                           var response = await http.post(
-                            Uri.parse('http://$ip:3000/messages'),
+                            Uri.parse('$apiURL/messages'),
                             headers: {"Content-Type": "application/json"},
-                            body: jsonEncode(
-                                {"message": textEditingController.text}),
+                            body: jsonEncode({
+                              "message": textEditingController.text,
+                              "sentBy": widget.senderId,
+                            }),
                           );
                           textEditingController.clear();
                           var decodedResponse = jsonDecode(response.body);

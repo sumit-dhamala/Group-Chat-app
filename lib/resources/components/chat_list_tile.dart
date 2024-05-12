@@ -15,7 +15,9 @@ class ChatListTile extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ChatMsg(),
+              builder: (context) => ChatMsg(
+                 senderId: 1,
+              ),
             ),
           );
         },
